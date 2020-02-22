@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using CDO;
 using PuppeteerSharp;
@@ -72,6 +74,10 @@ namespace WebArchive
             pdf.LoadFromFile("./1.pdf");
             pdf.SaveToFile("./1.html", FileFormat.HTML);
             await browser.CloseAsync();
+
+            var webClient = new WebClient { Proxy = new WebProxy("127.0.0.1", 7890) };
+            var strBytes = webClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false", "./1.pdf");
+            Console.WriteLine(Encoding.UTF8.GetString(strBytes));
         }
     }
 }
