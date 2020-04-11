@@ -29,7 +29,10 @@ namespace WebArchive
             new BrowserFetcher().GetExecutablePath(BrowserFetcher.DefaultRevision);
             var browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
-                Headless = true
+                Headless = true,
+                Timeout = 500,
+                IgnoreHTTPSErrors = true
+                
             });
             var page = await browser.NewPageAsync();
             await page.GoToAsync($"file:///{SetupBasePath}/web/index.html");
@@ -48,8 +51,9 @@ namespace WebArchive
             await browser.CloseAsync();
 
             var webClient = new WebClient { Proxy = new WebProxy("127.0.0.1", 7890) };
-            var strBytes = webClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false", "./index.pdf");
+            var strBytes = webClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false", "./web/index.html");
             Console.WriteLine(Encoding.UTF8.GetString(strBytes));
+            Console.ReadKey();
         }
     }
 }
