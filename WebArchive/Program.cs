@@ -1,30 +1,30 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using CDO;
 using PuppeteerSharp;
-using Spire.Pdf;
 
 namespace WebArchive
 {
     class Program
     {
+        private static string SetupBasePath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
         static async Task Main(string[] args)
         {
-            string url = "https://www.cnblogs.com/";
-            try
+            var monolith = new Process
             {
-                Message msg = new MessageClass();
-                var c = new Configuration();
-                msg.Configuration = c;
-                msg.CreateMHTMLBody(url, CdoMHTMLFlags.cdoSuppressAll, "", "");
-                msg.GetStream().SaveToFile(@"./1.mht", ADODB.SaveOptionsEnum.adSaveCreateOverWrite);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error:" + ex.Message);
-            }
+                StartInfo = new ProcessStartInfo("monolith.exe", "\"https://www.cnblogs.com/ \" -s -o ./web/index.html")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true
+                }
+            };
+
+            monolith.Start();
+            Console.WriteLine(monolith.StandardOutput.ReadToEnd());
 
             new BrowserFetcher().GetExecutablePath(BrowserFetcher.DefaultRevision);
             var browser = await Puppeteer.LaunchAsync(new LaunchOptions
@@ -32,51 +32,23 @@ namespace WebArchive
                 Headless = true
             });
             var page = await browser.NewPageAsync();
-            await page.GoToAsync("https://www.cnblogs.com/");
+            await page.GoToAsync($"file:///{SetupBasePath}/web/index.html");
             await page.SetViewportAsync(new ViewPortOptions
             {
                 Width = 1080,
             });
-            try
-            {
-                await page.WaitForNavigationAsync(new NavigationOptions
-                {
-                    Timeout = 1000,
-                    WaitUntil = new[] { WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Networkidle0 }
-                });
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
 
             await page.EvaluateFunctionAsync("() => window.scrollBy(0, document.body.scrollHeight)");
             await page.EvaluateFunctionAsync("() => window.scrollBy(0, window.innerHeight)");
             await page.EvaluateFunctionAsync("() => window.scrollBy(window.innerHeight, 0)");
             await page.EvaluateFunctionAsync("() => window.scrollBy(document.body.scrollHeight, 0)");
 
-            try
-            {
-                await page.WaitForNavigationAsync(new NavigationOptions
-                {
-                    Timeout = 3000,
-                    WaitUntil = new[] { WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Networkidle0 }
-                });
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
-
-            await page.ScreenshotAsync("./1.png", new ScreenshotOptions { FullPage = true });
-            await page.PdfAsync("./1.pdf");
-            var pdf = new PdfDocument();
-            pdf.LoadFromFile("./1.pdf");
-            pdf.SaveToFile("./1.html", FileFormat.HTML);
+            await page.ScreenshotAsync("./web/index.png", new ScreenshotOptions { FullPage = true });
+            await page.PdfAsync("./web/index.pdf");
             await browser.CloseAsync();
 
             var webClient = new WebClient { Proxy = new WebProxy("127.0.0.1", 7890) };
-            var strBytes = webClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false", "./1.pdf");
+            var strBytes = webClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false", "./index.pdf");
             Console.WriteLine(Encoding.UTF8.GetString(strBytes));
         }
     }
