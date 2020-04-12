@@ -14,18 +14,24 @@ namespace WebArchive
         {
             var monolith = new Process
             {
-                StartInfo = new ProcessStartInfo("monolith.exe", "\"https://www.cnblogs.com/ \" -s -o ./web/index.html")
+                StartInfo = new ProcessStartInfo("monolith.exe", "\"https://www.cnblogs.com/ \" -o ./index.html")
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardInput = true,
-                    RedirectStandardOutput = true
-                }
+                    RedirectStandardOutput = true,
+                    StandardOutputEncoding = Encoding.UTF8
+        }
             };
 
             monolith.Start();
-            Console.WriteLine(monolith.StandardOutput.ReadToEnd());
-
+            var outReadToEnd = monolith.StandardOutput.ReadToEnd();
+            Console.WriteLine(outReadToEnd);
+            var wwebClient = new WebClient { Proxy = new WebProxy("127.0.0.1", 7890), Encoding = Encoding.UTF8};
+            var strsBytes = wwebClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false",
+                "./index.html");
+            Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
+            Console.ReadKey();
             new BrowserFetcher().GetExecutablePath(BrowserFetcher.DefaultRevision);
             var browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
