@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -48,9 +49,10 @@ namespace WebArchive.Bot
                         var url = new Uri(message.Text, UriKind.Absolute);
                         var uuid = Guid.NewGuid();
                         Console.WriteLine(uuid);
+                        Directory.CreateDirectory($"./html/{uuid}");
                         var monolith = new Process
                         {
-                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o ./html/{uuid}.html -t 10000")
+                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o ./html/{uuid}/index.html -t 10000")
                             {
                                 UseShellExecute = false,
                                 CreateNoWindow = true,
@@ -63,19 +65,17 @@ namespace WebArchive.Bot
                         monolith.WaitForExit();
                         try
                         {
-                            if (File.Exists($"./html/{uuid}.html"))
+                            if (!File.Exists($"./html/{uuid}/index.html"))
+                                BotClient.SendTextMessageAsync(message.Chat.Id, "请求超时。",
+                                    replyToMessageId: message.MessageId);
+                            else
                             {
                                 var webClient = new WebClient {Proxy = MWebProxy, Encoding = Encoding.UTF8};
                                 var strsBytes = webClient.UploadFile(
                                     "https://ipfs.infura.io:5001/api/v0/add?pin=false",
-                                    $"./html/{uuid}.html");
+                                    $"./html/{uuid}/index.html");
                                 Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
                                 BotClient.SendTextMessageAsync(message.Chat.Id, Encoding.UTF8.GetString(strsBytes),
-                                    replyToMessageId: message.MessageId);
-                            }
-                            else
-                            {
-                                BotClient.SendTextMessageAsync(message.Chat.Id, "请求超时。",
                                     replyToMessageId: message.MessageId);
                             }
                         }
@@ -87,7 +87,8 @@ namespace WebArchive.Bot
                         }
                         finally
                         {
-                            File.Delete($"./html/{uuid}.html");
+                            File.Delete($"./html/{uuid}/index.html");
+                            Directory.Delete($"./html/{uuid}/");
                             BotClient.DeleteMessageAsync(message.Chat.Id, waitMessage.MessageId);
                         }
                     }
