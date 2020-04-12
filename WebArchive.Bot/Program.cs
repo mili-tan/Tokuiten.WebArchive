@@ -13,7 +13,8 @@ namespace WebArchive.Bot
     class Program
     {
         private static TelegramBotClient BotClient;
-        private static readonly WebProxy MWebProxy = new WebProxy("127.0.0.1", 7890);
+        private static string SetupBasePath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
+        //private static readonly WebProxy MWebProxy = new WebProxy("127.0.0.1", 7890);
 
         static void Main(string[] args)
         {
@@ -29,7 +30,8 @@ namespace WebArchive.Bot
                 tokenStr = Console.ReadLine();
             }
 
-            BotClient = new TelegramBotClient(tokenStr, MWebProxy);
+            BotClient = new TelegramBotClient(tokenStr);
+            //BotClient = new TelegramBotClient(tokenStr,MWebProxy);
 
             Console.Title = "Bot:@" + BotClient.GetMeAsync().Result.Username;
             Console.WriteLine($"@{BotClient.GetMeAsync().Result.Username} : Connected");
@@ -49,10 +51,10 @@ namespace WebArchive.Bot
                         var url = new Uri(message.Text, UriKind.Absolute);
                         var uuid = Guid.NewGuid();
                         Console.WriteLine(uuid);
-                        Directory.CreateDirectory($"./html/{uuid}");
+                        Directory.CreateDirectory($"{SetupBasePath}html/{uuid}");
                         var monolith = new Process
                         {
-                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o ./html/{uuid}/index.html -t 10000")
+                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o {SetupBasePath}html/{uuid}/index.html -t 10000")
                             {
                                 UseShellExecute = false,
                                 CreateNoWindow = true,
@@ -65,15 +67,16 @@ namespace WebArchive.Bot
                         monolith.WaitForExit();
                         try
                         {
-                            if (!File.Exists($"./html/{uuid}/index.html"))
+                            if (!File.Exists($"{SetupBasePath}html/{uuid}/index.html"))
                                 BotClient.SendTextMessageAsync(message.Chat.Id, "请求超时。",
                                     replyToMessageId: message.MessageId);
                             else
                             {
-                                var webClient = new WebClient {Proxy = MWebProxy, Encoding = Encoding.UTF8};
+                                var webClient = new WebClient {Encoding = Encoding.UTF8};
+                                //webClient.Proxy = MWebProxy;
                                 var strsBytes = webClient.UploadFile(
-                                    "https://ipfs.infura.io:5001/api/v0/add?pin=false",
-                                    $"./html/{uuid}/index.html");
+                                    "https://ipfs.infura.io:5001/api/v0/add?pin=true",
+                                    $"{SetupBasePath}html/{uuid}/index.html");
                                 Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
                                 BotClient.SendTextMessageAsync(message.Chat.Id, Encoding.UTF8.GetString(strsBytes),
                                     replyToMessageId: message.MessageId);
@@ -87,8 +90,8 @@ namespace WebArchive.Bot
                         }
                         finally
                         {
-                            File.Delete($"./html/{uuid}/index.html");
-                            Directory.Delete($"./html/{uuid}/");
+                            File.Delete($"{SetupBasePath}html/{uuid}/index.html");
+                            Directory.Delete($"{SetupBasePath}html/{uuid}/");
                             BotClient.DeleteMessageAsync(message.Chat.Id, waitMessage.MessageId);
                         }
                     }
