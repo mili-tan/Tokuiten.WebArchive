@@ -13,6 +13,7 @@ namespace WebArchive.Bot
     {
         private static TelegramBotClient BotClient;
         private static readonly WebProxy MWebProxy = new WebProxy("127.0.0.1", 7890);
+
         static void Main(string[] args)
         {
             Console.WriteLine("Telegram Wayback WebArchive Bot");
@@ -49,7 +50,7 @@ namespace WebArchive.Bot
                         Console.WriteLine(uuid);
                         var monolith = new Process
                         {
-                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o ./html/{uuid}.html")
+                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o ./html/{uuid}.html -t 10000")
                             {
                                 UseShellExecute = false,
                                 CreateNoWindow = true,
@@ -59,20 +60,29 @@ namespace WebArchive.Bot
                             }
                         };
                         monolith.Start();
-                        monolith.WaitForExit(100000);
+                        monolith.WaitForExit();
                         try
                         {
-                            var webClient = new WebClient {Proxy = MWebProxy, Encoding = Encoding.UTF8};
-                            var strsBytes = webClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false",
-                                $"./html/{uuid}.html");
-                            Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
-                            BotClient.SendTextMessageAsync(message.Chat.Id, Encoding.UTF8.GetString(strsBytes),
-                                replyToMessageId: message.MessageId);
+                            if (File.Exists($"./html/{uuid}.html"))
+                            {
+                                var webClient = new WebClient {Proxy = MWebProxy, Encoding = Encoding.UTF8};
+                                var strsBytes = webClient.UploadFile(
+                                    "https://ipfs.infura.io:5001/api/v0/add?pin=false",
+                                    $"./html/{uuid}.html");
+                                Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
+                                BotClient.SendTextMessageAsync(message.Chat.Id, Encoding.UTF8.GetString(strsBytes),
+                                    replyToMessageId: message.MessageId);
+                            }
+                            else
+                            {
+                                BotClient.SendTextMessageAsync(message.Chat.Id, "请求超时。",
+                                    replyToMessageId: message.MessageId);
+                            }
                         }
                         catch (Exception e)
                         {
                             Console.WriteLine(e);
-                            BotClient.SendTextMessageAsync(message.Chat.Id, "上传文件到IPFS网络失败，请稍候重试。",
+                            BotClient.SendTextMessageAsync(message.Chat.Id, "上传到IPFS网络失败，请稍候重试。",
                                 replyToMessageId: message.MessageId);
                         }
                         finally
@@ -88,14 +98,15 @@ namespace WebArchive.Bot
                             replyToMessageId: message.MessageId);
                         BotClient.DeleteMessageAsync(message.Chat.Id, waitMessage.MessageId);
                     }
-
                 });
             };
 
             BotClient.StartReceiving(Array.Empty<UpdateType>());
-            Console.ReadLine();
-            Console.WriteLine("Exit");
-            BotClient.StopReceiving();
+            while (true)
+            {
+                if (Console.ReadLine() != "exit") continue;
+                BotClient.StopReceiving();
+            }
         }
     }
 }

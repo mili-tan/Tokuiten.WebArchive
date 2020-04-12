@@ -27,11 +27,6 @@ namespace WebArchive
             monolith.Start();
             var outReadToEnd = monolith.StandardOutput.ReadToEnd();
             Console.WriteLine(outReadToEnd);
-            var wwebClient = new WebClient { Proxy = new WebProxy("127.0.0.1", 7890), Encoding = Encoding.UTF8};
-            var strsBytes = wwebClient.UploadFile("https://ipfs.infura.io:5001/api/v0/add?pin=false",
-                "./index.html");
-            Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
-            Console.ReadKey();
             new BrowserFetcher().GetExecutablePath(BrowserFetcher.DefaultRevision);
             var browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
