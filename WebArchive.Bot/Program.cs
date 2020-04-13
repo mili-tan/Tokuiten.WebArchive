@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -14,24 +15,25 @@ namespace WebArchive.Bot
     {
         private static TelegramBotClient BotClient;
         private static string SetupBasePath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
-        //private static readonly WebProxy MWebProxy = new WebProxy("127.0.0.1", 7890);
+        private static readonly WebProxy MWebProxy = new WebProxy("127.0.0.1", 7890);
 
         static void Main(string[] args)
         {
+            Console.WriteLine(MWebProxy.Address.DnsSafeHost);
+            //Environment.SetEnvironmentVariable("http_proxy", $"{MWebProxy.Address.Host}:{MWebProxy.Address.Port}", EnvironmentVariableTarget.User);
             Console.WriteLine("Telegram Wayback WebArchive Bot");
             string tokenStr;
             if (File.Exists("token.text"))
                 tokenStr = File.ReadAllText("token.text");
             else if (!string.IsNullOrWhiteSpace(string.Join("", args)))
-                tokenStr = string.Join("", args);
+                tokenStr = string.Join("http_proxy", MWebProxy.Address.DnsSafeHost);
             else
             {
                 Console.WriteLine("Token:");
                 tokenStr = Console.ReadLine();
             }
 
-            BotClient = new TelegramBotClient(tokenStr);
-            //BotClient = new TelegramBotClient(tokenStr,MWebProxy);
+            BotClient = new TelegramBotClient(tokenStr,MWebProxy);
 
             Console.Title = "Bot:@" + BotClient.GetMeAsync().Result.Username;
             Console.WriteLine($"@{BotClient.GetMeAsync().Result.Username} : Connected");
@@ -52,19 +54,22 @@ namespace WebArchive.Bot
                         var uuid = Guid.NewGuid();
                         Console.WriteLine(uuid);
                         Directory.CreateDirectory($"{SetupBasePath}html/{uuid}");
-                        var monolith = new Process
+                        var startInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o {SetupBasePath}html/{uuid}/index.html -t 30000")
                         {
-                            StartInfo = new ProcessStartInfo("monolith", $"\"{url}\" -o {SetupBasePath}html/{uuid}/index.html -t 10000")
-                            {
-                                UseShellExecute = false,
-                                CreateNoWindow = true,
-                                RedirectStandardInput = true,
-                                RedirectStandardOutput = true,
-                                StandardOutputEncoding = Encoding.UTF8
-                            }
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
+                            RedirectStandardInput = true,
+                            RedirectStandardOutput = true,
+                            StandardOutputEncoding = Encoding.UTF8
                         };
+                        //startInfo.EnvironmentVariables["http_proxy"] =
+                        //    $"{MWebProxy.Address.Host}:{MWebProxy.Address.Port}";
+                        //startInfo.Environment["http_proxy"] =
+                        //    $"{MWebProxy.Address.Host}:{MWebProxy.Address.Port}";
+                        //Console.WriteLine(startInfo.EnvironmentVariables["HTTP_PROXY"]);
+                        var monolith = new Process {StartInfo = startInfo};
                         monolith.Start();
-                        monolith.WaitForExit();
+                        monolith.WaitForExit(30000);
                         try
                         {
                             if (!File.Exists($"{SetupBasePath}html/{uuid}/index.html"))
@@ -73,7 +78,7 @@ namespace WebArchive.Bot
                             else
                             {
                                 var webClient = new WebClient {Encoding = Encoding.UTF8};
-                                //webClient.Proxy = MWebProxy;
+                                webClient.Proxy = MWebProxy;
                                 var strsBytes = webClient.UploadFile(
                                     "https://ipfs.infura.io:5001/api/v0/add?pin=true",
                                     $"{SetupBasePath}html/{uuid}/index.html");
