@@ -62,11 +62,14 @@ namespace WebArchive.Bot
                             RedirectStandardOutput = true,
                             StandardOutputEncoding = Encoding.UTF8
                         };
-                        //startInfo.EnvironmentVariables["http_proxy"] =
-                        //    $"{MWebProxy.Address.Host}:{MWebProxy.Address.Port}";
+                        startInfo.EnvironmentVariables["http_proxy"] =
+                            $"http://{MWebProxy.Address.Host}:{MWebProxy.Address.Port}";
+                        startInfo.EnvironmentVariables["https_proxy"] =
+                            $"http://{MWebProxy.Address.Host}:{MWebProxy.Address.Port}";
+                        startInfo.EnvironmentVariables["no_proxy"] = false.ToString().ToLower();
                         //startInfo.Environment["http_proxy"] =
                         //    $"{MWebProxy.Address.Host}:{MWebProxy.Address.Port}";
-                        //Console.WriteLine(startInfo.EnvironmentVariables["HTTP_PROXY"]);
+                        Console.WriteLine(startInfo.EnvironmentVariables["http_proxy"]);
                         var monolith = new Process {StartInfo = startInfo};
                         monolith.Start();
                         monolith.WaitForExit(30000);
