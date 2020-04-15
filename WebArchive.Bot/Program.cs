@@ -80,8 +80,8 @@ namespace WebArchive.Bot
                                     $"{SetupBasePath}html/{uuid}/index.html");
                                 Console.WriteLine(Encoding.UTF8.GetString(strsBytes).Trim());
                                 var jObj = JsonConvert.DeserializeObject<dynamic>(Encoding.UTF8.GetString(strsBytes));
-                                BotClient.SendTextMessageAsync(message.Chat.Id, jObj.Hash.ToString(),
-                                    replyToMessageId: message.MessageId);
+                                BotClient.SendTextMessageAsync(message.Chat.Id, "https://ipfs.io/ipfs/" +
+                                    jObj.Hash.ToString(), replyToMessageId: message.MessageId);
                             }
                         }
                         catch (Exception e)
