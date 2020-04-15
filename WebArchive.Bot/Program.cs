@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
@@ -22,8 +21,8 @@ namespace WebArchive.Bot
             //Environment.SetEnvironmentVariable("http_proxy", $"{MWebProxy.Address.Host}:{MWebProxy.Address.Port}", EnvironmentVariableTarget.User);
             Console.WriteLine("Telegram Wayback WebArchive Bot");
             string tokenStr;
-            if (File.Exists("token.text"))
-                tokenStr = File.ReadAllText("token.text");
+            if (File.Exists(SetupBasePath + "token.text"))
+                tokenStr = File.ReadAllText(SetupBasePath + "token.text");
             else if (!string.IsNullOrWhiteSpace(string.Join("", args)))
                 tokenStr = string.Join("http_proxy", MWebProxy.Address.DnsSafeHost);
             else
@@ -79,8 +78,9 @@ namespace WebArchive.Bot
                                 var strsBytes = webClient.UploadFile(
                                     "https://ipfs.infura.io:5001/api/v0/add?pin=true",
                                     $"{SetupBasePath}html/{uuid}/index.html");
-                                Console.WriteLine(Encoding.UTF8.GetString(strsBytes));
-                                BotClient.SendTextMessageAsync(message.Chat.Id, Encoding.UTF8.GetString(strsBytes),
+                                Console.WriteLine(Encoding.UTF8.GetString(strsBytes).Trim());
+                                var jObj = JsonConvert.DeserializeObject<dynamic>(Encoding.UTF8.GetString(strsBytes));
+                                BotClient.SendTextMessageAsync(message.Chat.Id, jObj.Hash.ToString(),
                                     replyToMessageId: message.MessageId);
                             }
                         }
