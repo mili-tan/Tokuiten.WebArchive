@@ -113,6 +113,7 @@ namespace WebArchive.Bot
                 if (Console.ReadLine() != "exit") continue;
                 BotClient.StopReceiving();
             }
+            // ReSharper disable once FunctionNeverReturns
         }
     }
 }
